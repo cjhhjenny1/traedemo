@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机决策器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: #f0f0f0;
+            padding: 6px;
+            border-radius: 12px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            color: #666;
+        }
+
+        .mode-tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .mode-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 0 auto 30px;
+        }
+
+        #wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 0 0 8px #fff, 0 0 0 12px #667eea, 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #ff6b6b;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+            z-index: 10;
+        }
+
+        .pointer::after {
+            content: '';
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #ff6b6b;
+            border-radius: 50%;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(145deg, #fff, #f0f0f0);
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            z-index: 5;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .center-circle:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .center-circle:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-section input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .input-section input:focus {
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .options-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 25px;
+            min-height: 40px;
+        }
+
+        .option-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .option-tag .remove-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .option-tag .remove-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-spin {
+            width: 100%;
+            padding: 16px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .btn-spin:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-spin:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-reset {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background: #e0e0e0;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .btn-reset:hover {
+            background: #d0d0d0;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .settings-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-label {
+            font-size: 14px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .color-themes {
+            display: flex;
+            gap: 8px;
+        }
+
+        .color-theme-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-theme-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .color-theme-btn.active {
+            border-color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .sound-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #ddd;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
+            perspective: 1000px;
+        }
+
+        .card {
+            aspect-ratio: 3/4;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 24px;
+        }
+
+        .card-back::before {
+            content: '?';
+            font-size: 32px;
+        }
+
+        .card-front {
+            background: white;
+            color: #333;
+            font-size: 14px;
+            padding: 10px;
+            text-align: center;
+            transform: rotateY(180deg);
+            border: 3px solid;
+        }
+
+        .card:hover:not(.flipped) {
+            transform: translateY(-5px);
+        }
+
+        .card.fade-out {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .dice-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .dice-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .dice-control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dice-control-group label {
+            font-size: 14px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .dice-count-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .dice-count-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .dice-count-btn:hover {
+            border-color: #667eea;
+        }
+
+        .dice-count-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+
+        .dice-mode-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .dice-mode-btn {
+            padding: 6px 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .dice-mode-btn:hover {
+            border-color: #667eea;
+        }
+
+        .dice-mode-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            min-height: 100px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .dice-2d {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        .dice-2d.rolling {
+            animation: diceRoll2D 0.1s infinite;
+        }
+
+        @keyframes diceRoll2D {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(90deg) scale(1.1); }
+            50% { transform: rotate(180deg) scale(1); }
+            75% { transform: rotate(270deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .dice-result {
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .dice-total {
+            font-size: 24px;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .btn-dice {
+            width: 100%;
+            padding: 16px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .btn-dice:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-dice:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            width: 320px;
+            text-align: center;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+        }
+
+        .modal-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .modal-close-btn {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-close-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>随机决策器</h1>
+        
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="wheel">🎡 转盘</button>
+            <button class="mode-tab" data-mode="card">🃏 抽卡</button>
+            <button class="mode-tab" data-mode="dice">🎲 骰子</button>
+        </div>
+
+        <div id="wheelMode" class="mode-content active">
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <canvas id="wheel" width="320" height="320"></canvas>
+                <div class="center-circle" id="centerCircle">🎯</div>
+            </div>
+        </div>
+
+        <div id="cardMode" class="mode-content">
+            <div class="cards-container" id="cardsContainer"></div>
+        </div>
+
+        <div id="diceMode" class="mode-content">
+            <div class="dice-section">
+                <div class="dice-controls">
+                    <div class="dice-control-group">
+                        <label>数量:</label>
+                        <div class="dice-count-btns">
+                            <button class="dice-count-btn" data-count="1">1</button>
+                            <button class="dice-count-btn" data-count="2">2</button>
+                            <button class="dice-count-btn active" data-count="3">3</button>
+                            <button class="dice-count-btn" data-count="4">4</button>
+                            <button class="dice-count-btn" data-count="5">5</button>
+                            <button class="dice-count-btn" data-count="6">6</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="dice-area" id="diceArea"></div>
+                <div class="dice-result">
+                    总和: <span class="dice-total" id="diceTotal">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-row">
+                <span class="settings-label">🎨 配色</span>
+                <div class="color-themes">
+                    <button class="color-theme-btn active" data-theme="rainbow" style="background: conic-gradient(#FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7, #FF6B6B);" title="彩虹"></button>
+                    <button class="color-theme-btn" data-theme="ocean" style="background: conic-gradient(#0077B6, #00B4D8, #90E0EF, #CAF0F8, #0077B6);" title="海洋"></button>
+                    <button class="color-theme-btn" data-theme="sunset" style="background: conic-gradient(#FF6B6B, #FF8E53, #FFA500, #FFD700, #FF6B6B);" title="日落"></button>
+                    <button class="color-theme-btn" data-theme="forest" style="background: conic-gradient(#2D5016, #4A7C23, #6B8E23, #8FBC8F, #2D5016);" title="森林"></button>
+                    <button class="color-theme-btn" data-theme="candy" style="background: conic-gradient(#FF69B4, #FFB6C1, #DDA0DD, #E6E6FA, #FF69B4);" title="糖果"></button>
+                </div>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">🔊 音效</span>
+                <div class="sound-toggle">
+                    <div class="toggle-switch active" id="soundToggle"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="inputSection" class="input-section">
+            <input type="text" id="optionInput" placeholder="输入选项名称..." maxlength="20">
+            <button class="btn btn-add" id="addBtn">添加</button>
+        </div>
+
+        <div id="optionsList" class="options-list"></div>
+
+        <button id="actionBtn" class="btn btn-spin" disabled>🎯 开始抽取</button>
+
+        <button class="btn btn-reset" id="resetBtn">🔄 重置</button>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-content">
+                <div class="modal-icon">🎉</div>
+                <div class="modal-text" id="modalText"></div>
+                <button class="modal-close-btn" id="modalCloseBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colorThemes = {
+            rainbow: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8B500', '#FF8C00'],
+            ocean: ['#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8', '#48CAE4', '#023E8A', '#0096C7', '#ADE8F4', '#03045E', '#00509D', '#0077B6', '#00B4D8'],
+            sunset: ['#FF6B6B', '#FF8E53', '#FFA500', '#FFD700', '#FF7F50', '#FF6347', '#FF4500', '#FFA07A', '#FFB347', '#FFCC00', '#FF9933', '#FF6666'],
+            forest: ['#2D5016', '#4A7C23', '#6B8E23', '#8FBC8F', '#228B22', '#32CD32', '#90EE90', '#3CB371', '#2E8B57', '#66CDAA', '#20B2AA', '#98FB98'],
+            candy: ['#FF69B4', '#FFB6C1', '#DDA0DD', '#E6E6FA', '#FFC0CB', '#DB7093', '#FF1493', '#FF69B4', '#FFB6C1', '#FFAEB9', '#EEA9B8', '#FF82AB']
+        };
+
+        const diceEmojis = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+        // 为每种模式创建独立的选项存储
+        const modeOptions = {
+            wheel: [],
+            card: [],
+            dice: []
+        };
+        
+        let currentColors = colorThemes.rainbow;
+        let soundEnabled = true;
+        let currentMode = 'wheel';
+        let diceCount = 3;
+        let isRolling = false;
+        
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const optionInput = document.getElementById('optionInput');
+        const addBtn = document.getElementById('addBtn');
+        const optionsList = document.getElementById('optionsList');
+        const actionBtn = document.getElementById('actionBtn');
+        const inputSection = document.getElementById('inputSection');
+        const cardsContainer = document.getElementById('cardsContainer');
+        const diceArea = document.getElementById('diceArea');
+        const diceTotal = document.getElementById('diceTotal');
+        
+        let isSpinning = false;
+        let currentRotation = 0;
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 5;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (modeOptions[currentMode].length === 0) {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#999';
+                ctx.font = '16px Microsoft YaHei';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('请添加选项', centerX, centerY);
+                return;
+            }
+            
+            const sliceAngle = (2 * Math.PI) / modeOptions[currentMode].length;
+            
+            modeOptions[currentMode].forEach((option, index) => {
+                const startAngle = index * sliceAngle - Math.PI / 2;
+                const endAngle = startAngle + sliceAngle;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                
+                ctx.fillStyle = currentColors[index % currentColors.length];
+                ctx.fill();
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Microsoft YaHei';
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 3;
+                
+                const text = option.length > 6 ? option.substring(0, 6) + '...' : option;
+                ctx.fillText(text, radius - 15, 0);
+                ctx.restore();
+            });
+        }
+
+        function addOption() {
+            const value = optionInput.value.trim();
+            if (value && modeOptions[currentMode].length < 12) {
+                modeOptions[currentMode].push(value);
+                optionInput.value = '';
+                renderOptions();
+                if (currentMode === 'wheel') drawWheel();
+                else if (currentMode === 'card') renderCards();
+                updateActionBtn();
+            }
+        }
+
+        function removeOption(index) {
+            modeOptions[currentMode].splice(index, 1);
+            renderOptions();
+            if (currentMode === 'wheel') drawWheel();
+            else if (currentMode === 'card') renderCards();
+            updateActionBtn();
+        }
+
+        function renderOptions() {
+            optionsList.innerHTML = modeOptions[currentMode].map((opt, index) => `
+                <span class="option-tag" style="background: linear-gradient(135deg, ${currentColors[index % currentColors.length]}, ${currentColors[(index + 1) % currentColors.length]})">
+                    ${opt}
+                    <button class="remove-btn" onclick="removeOption(${index})">×</button>
+                </span>
+            `).join('');
+        }
+
+        function playSpinSound() {
+            if (!soundEnabled) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.5);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function playResultSound() {
+            if (!soundEnabled) return;
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.frequency.value = freq;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                }, i * 150);
+            });
+        }
+
+        function playFlipSound() {
+            if (!soundEnabled) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.15);
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+
+        function playDiceRollSound() {
+            if (!soundEnabled) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(200, audioContext.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.05);
+        }
+
+        function playDiceLandSound() {
+            if (!soundEnabled) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function setColorTheme(theme) {
+            currentColors = colorThemes[theme];
+            document.querySelectorAll('.color-theme-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === theme);
+            });
+            drawWheel();
+            renderOptions();
+            renderCards();
+        }
+
+        function updateActionBtn() {
+            if (currentMode === 'wheel' || currentMode === 'card') {
+                actionBtn.disabled = modeOptions[currentMode].length < 2;
+            } else {
+                actionBtn.disabled = isRolling;
+            }
+        }
+
+        function showModal(text) {
+            const modalText = document.getElementById('modalText');
+            const modalOverlay = document.getElementById('modalOverlay');
+            modalText.textContent = text;
+            modalOverlay.classList.add('show');
+        }
+
+        function hideModal() {
+            const modalOverlay = document.getElementById('modalOverlay');
+            modalOverlay.classList.remove('show');
+        }
+
+        function resetAll() {
+            if (isSpinning || isRolling) return;
+            modeOptions[currentMode].length = 0;
+            currentRotation = 0;
+            canvas.style.transform = 'rotate(0deg)';
+            renderOptions();
+            drawWheel();
+            renderCards();
+            updateActionBtn();
+            diceTotal.textContent = '-';
+            diceArea.innerHTML = '';
+        }
+
+        function spin() {
+            if (isSpinning || modeOptions[currentMode].length < 2) return;
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            isSpinning = true;
+            actionBtn.disabled = true;
+            
+            playSpinSound();
+            
+            const randomIndex = Math.floor(Math.random() * modeOptions[currentMode].length);
+            const sliceAngle = 360 / modeOptions[currentMode].length;
+            const spins = 5 + Math.floor(Math.random() * 3);
+            const targetAngle = spins * 360 + (360 - randomIndex * sliceAngle - sliceAngle / 2);
+            
+            currentRotation = targetAngle;
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+            
+            setTimeout(() => {
+                isSpinning = false;
+                updateActionBtn();
+                
+                playResultSound();
+                showModal(`🎉 恭喜选中：${modeOptions[currentMode][randomIndex]}`);
+            }, 4000);
+        }
+
+        function renderCards() {
+            if (modeOptions[currentMode].length === 0) {
+                cardsContainer.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;">请先添加选项</div>';
+                return;
+            }
+            
+            // 随机排序选项
+            const shuffledOptions = [...modeOptions[currentMode]].sort(() => Math.random() - 0.5);
+            
+            cardsContainer.innerHTML = shuffledOptions.map((opt, index) => {
+                const originalIndex = modeOptions[currentMode].indexOf(opt);
+                return `
+                    <div class="card" data-index="${originalIndex}" onclick="flipCard(this, ${originalIndex})">
+                        <div class="card-face card-back"></div>
+                        <div class="card-face card-front" style="border-color: ${currentColors[originalIndex % currentColors.length]}">${opt}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function flipCard(card, index) {
+            if (card.classList.contains('flipped') || card.classList.contains('fade-out')) return;
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            playFlipSound();
+            
+            card.classList.add('flipped');
+            
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card && !c.classList.contains('flipped')) {
+                    c.classList.add('fade-out');
+                }
+            });
+            
+            setTimeout(() => {
+                playResultSound();
+                showModal(`🎉 恭喜选中：${modeOptions[currentMode][index]}`);
+            }, 600);
+        }
+
+        function renderDice() {
+            diceArea.innerHTML = '';
+            for (let i = 0; i < diceCount; i++) {
+                const dice = document.createElement('div');
+                dice.className = 'dice-2d';
+                dice.innerHTML = '⚀';
+                diceArea.appendChild(dice);
+            }
+        }
+
+        function rollDice() {
+            if (isRolling) return;
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            isRolling = true;
+            actionBtn.disabled = true;
+            
+            const diceElements = document.querySelectorAll('.dice-2d');
+            diceElements.forEach(d => d.classList.add('rolling'));
+            
+            let rollCount = 0;
+            const maxRolls = 20;
+            
+            const rollInterval = setInterval(() => {
+                playDiceRollSound();
+                
+                diceElements.forEach(d => {
+                    const value = Math.floor(Math.random() * 6) + 1;
+                    d.innerHTML = diceEmojis[value];
+                });
+                
+                rollCount++;
+                if (rollCount >= maxRolls) {
+                    clearInterval(rollInterval);
+                    finishRoll(diceElements);
+                }
+            }, 100);
+        }
+
+        function finishRoll(diceElements) {
+            diceElements.forEach(d => d.classList.remove('rolling'));
+            
+            const finalResults = [];
+            diceElements.forEach((d, i) => {
+                const value = Math.floor(Math.random() * 6) + 1;
+                finalResults.push(value);
+                d.innerHTML = diceEmojis[value];
+            });
+            
+            const total = finalResults.reduce((a, b) => a + b, 0);
+            diceTotal.textContent = total;
+            
+            playDiceLandSound();
+            
+            setTimeout(() => {
+                playResultSound();
+                showModal(`🎲 点数总和：${total}`);
+            }, 300);
+            
+            isRolling = false;
+            updateActionBtn();
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mode === mode);
+            });
+            
+            document.querySelectorAll('.mode-content').forEach(content => {
+                content.classList.toggle('active', content.id === mode + 'Mode');
+            });
+            
+            if (mode === 'dice') {
+                inputSection.classList.add('hidden');
+                optionsList.classList.add('hidden');
+                actionBtn.classList.add('hidden');
+                actionBtn.textContent = '🎲 掷骰子';
+                actionBtn.className = 'btn btn-dice';
+                renderDice();
+            } else if (mode === 'card') {
+                inputSection.classList.remove('hidden');
+                optionsList.classList.remove('hidden');
+                actionBtn.classList.add('hidden');
+                renderCards();
+            } else {
+                inputSection.classList.remove('hidden');
+                optionsList.classList.remove('hidden');
+                actionBtn.classList.remove('hidden');
+                actionBtn.textContent = '🎯 开始抽取';
+                actionBtn.className = 'btn btn-spin';
+            }
+            
+            renderOptions();
+            updateActionBtn();
+        }
+
+        addBtn.addEventListener('click', addOption);
+        optionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addOption();
+        });
+
+        actionBtn.addEventListener('click', () => {
+            if (currentMode === 'wheel') {
+                spin();
+            } else if (currentMode === 'dice') {
+                rollDice();
+            }
+        });
+
+        document.getElementById('centerCircle').addEventListener('click', spin);
+
+        document.getElementById('modalCloseBtn').addEventListener('click', hideModal);
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modalOverlay') {
+                hideModal();
+            }
+        });
+
+        resetBtn.addEventListener('click', resetAll);
+
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+        });
+
+        document.querySelectorAll('.color-theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => setColorTheme(btn.dataset.theme));
+        });
+
+        document.getElementById('soundToggle').addEventListener('click', function() {
+            soundEnabled = !soundEnabled;
+            this.classList.toggle('active', soundEnabled);
+        });
+
+        document.querySelectorAll('.dice-count-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.dice-count-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                diceCount = parseInt(btn.dataset.count);
+                renderDice();
+            });
+        });
+
+        drawWheel();
+    </script>
+</body>
+</html>
